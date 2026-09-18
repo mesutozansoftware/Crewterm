@@ -1,0 +1,4 @@
+node_modules/
+.crewterm/
+.DS_Store
+dist/

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a3240"/>
+      <stop offset="1" stop-color="#0d1015"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".10"/>
+      <stop offset=".5" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="14" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <!-- macOS icon grid: 824px body with 100px margin -->
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)"/>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#shine)"/>
+  <rect x="102" y="102" width="820" height="820" rx="183" fill="none" stroke="#ffffff" stroke-opacity=".09" stroke-width="4"/>
+  <!-- prompt chevron -->
+  <path d="M292 352 L478 512 L292 672" fill="none" stroke="#f3f5f8" stroke-width="78" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- the crew: three agents forming the cursor -->
+  <g filter="url(#glow)">
+    <circle cx="566" cy="672" r="46" fill="#d97757"/>
+    <circle cx="676" cy="672" r="46" fill="#6ea8fe"/>
+    <circle cx="786" cy="672" r="46" fill="#3fb950"/>
+  </g>
+</svg>

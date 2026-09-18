@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>Crewterm</title>
+  <link rel="stylesheet" href="../../node_modules/@xterm/xterm/css/xterm.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="brand"><img src="icon.png" alt="" width="22" height="22">Crewterm</div>
+    <button id="chooseProject" class="secondary">Choose project folder</button>
+    <span id="projectPath" class="path">No project selected</span>
+    <div class="spacer"></div>
+    <button id="quickTeam" class="secondary">Quick team: Claude + Codex</button>
+    <button id="openAddAgent">+ Add agent</button>
+  </header>
+
+  <main>
+    <section id="panes">
+      <div id="empty" class="empty-state">
+        <h2>Assemble your AI crew</h2>
+        <ol>
+          <li>Pick a <b>project folder</b> at the top. Every agent works inside it.</li>
+          <li>Use <b>Add agent</b> to launch Claude Code, Codex, or any command you like.</li>
+          <li>Give an agent a task from the side panel. Agents message each other and split the work.</li>
+        </ol>
+      </div>
+    </section>
+
+    <aside>
+      <nav class="tabs">
+        <button data-tab="messages" class="active">Messages</button>
+        <button data-tab="tasks">Tasks</button>
+      </nav>
+
+      <div id="messages" class="tab active">
+        <ul id="messageList" class="list"></ul>
+        <form id="messageForm" class="form">
+          <select id="messageTo"></select>
+          <textarea id="messageText" rows="3" placeholder="Message the crew… (Enter sends, Shift+Enter for a new line)"></textarea>
+          <button type="submit">Send</button>
+        </form>
+      </div>
+
+      <div id="tasks" class="tab">
+        <ul id="taskList" class="list"></ul>
+        <form id="taskForm" class="form">
+          <input id="taskTitle" placeholder="New task title">
+          <select id="taskAssignee"></select>
+          <button type="submit">Add task</button>
+        </form>
+      </div>
+    </aside>
+  </main>
+
+  <dialog id="agentDialog">
+    <form id="agentForm" method="dialog">
+      <h3>Add agent</h3>
+      <label>Name <input id="agentName" required placeholder="e.g. architect"></label>
+      <label>Kind
+        <select id="agentKind">
+          <option value="claude">Claude Code</option>
+          <option value="codex">Codex CLI</option>
+          <option value="custom">Custom command</option>
+        </select>
+      </label>
+      <label>Role <input id="agentRole" placeholder="e.g. plans, splits the work, reviews code"></label>
+      <label id="commandField" hidden>Command <input id="agentCommand" placeholder="e.g. gemini"></label>
+      <label class="checkbox"><input type="checkbox" id="agentNotify" checked> Type a "[crewterm]" notice in its terminal when a message arrives</label>
+      <p id="agentError" class="error"></p>
+      <div class="buttons">
+        <button type="button" id="agentCancel" class="secondary">Cancel</button>
+        <button type="submit" value="ok">Start</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="../../node_modules/@xterm/xterm/lib/xterm.js"></script>
+  <script src="../../node_modules/@xterm/addon-fit/lib/addon-fit.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
