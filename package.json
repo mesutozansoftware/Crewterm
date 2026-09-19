@@ -1,12 +1,12 @@
 {
   "name": "crewterm",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Run Claude Code, Codex, and other AI coding agents side by side in one window — as a team.",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
     "postinstall": "electron-rebuild -f -w node-pty",
-    "test": "node test/e2e.js",
+    "test": "node test/e2e.js && node test/worktree.js",
     "icon": "electron scripts/render-icon.cjs && sips -z 256 256 build/icon.png --out src/ui/icon.png",
     "dist:mac": "electron-builder --mac",
     "dist:win": "electron-builder --win",

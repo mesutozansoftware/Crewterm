@@ -31,6 +31,7 @@ a way to **talk to each other**:
 - 🖥️ **One window, many agents.** Real terminals for Claude Code, Codex, or any CLI you like.
 - 💬 **Agent-to-agent messaging.** Direct messages, broadcasts to the whole crew, or reports to you.
 - 📋 **Shared task board.** Agents add, claim, and complete tasks so nobody does the same work twice.
+- 🌿 **A git worktree per agent.** Each agent edits on its own branch, so parallel work never collides. Merge an agent's work with one click — conflicts are aborted safely.
 - 🔔 **Automatic nudges.** When an agent gets a message, Crewterm types a `[crewterm]` notice into its terminal and it checks its inbox on its own.
 - 🧑‍✈️ **You stay in charge.** Message any agent or assign tasks from the side panel, and type into any terminal directly.
 - 🔌 **Built on MCP.** Any agent that supports the Model Context Protocol can join the crew.
@@ -91,6 +92,25 @@ Crewterm runs the agent CLIs you already have, so install and sign in to the one
 
 > The first time Claude Code opens a folder, it asks whether you trust it. Confirm it once in the agent's pane.
 
+## Parallel work with git worktrees
+
+When the project folder is a git repository, every agent gets its own
+[worktree](https://git-scm.com/docs/git-worktree) in `.crewterm/worktrees/<name>` on a branch
+named `crewterm/<name>`. Two agents can edit the same file at the same time without overwriting
+each other.
+
+- Agents are told to **commit** their work when they finish a task.
+- Click **Merge** on an agent's pane to merge its branch into the project's current branch.
+  The rest of the crew is notified so they can pull in the changes.
+- Uncommitted work is never merged, and if there's a **conflict** the merge is aborted and your
+  project is left untouched. Ask the agent to run `git merge main` in its worktree and resolve it.
+- Agents can review each other with `git diff main...crewterm/<name>`.
+- `.crewterm/` is added to `.git/info/exclude`, so it never shows up in `git status` and your
+  `.gitignore` isn't touched.
+
+The project needs at least one commit. To have an agent work directly in the project folder
+instead, untick **Work in its own git worktree** when adding it.
+
 ## How it works
 
 ```
@@ -134,7 +154,7 @@ npm start -- ~/my-project # open a project folder directly
 ```
 
 ```bash
-npm test            # end-to-end test of the hub and MCP server
+npm test            # end-to-end + worktree tests
 npm run dist:mac    # build .app + .dmg into dist/
 npm run dist:win    # build the Windows installer (works from macOS too)
 npm run icon        # re-render the icon from build/icon.svg
@@ -145,15 +165,17 @@ npm run icon        # re-render the icon from build/icon.svg
 ```
 src/main.js      Electron main process: launches agents in terminals, delivers notices
 src/hub.js       Local HTTP hub that stores messages and tasks
+src/worktree.js  Per-agent git worktrees and merging
 src/ui/          The window: terminal panes, messages, task board
 mcp/server.js    MCP server each agent connects to
 test/e2e.js      End-to-end test with two real MCP clients
+test/worktree.js Worktree and merge tests against a real git repository
 ```
 
 ## Roadmap
 
-- [ ] A separate git worktree per agent, so agents can work in parallel without conflicts
-- [ ] File locks
+- [x] A separate git worktree per agent, so agents can work in parallel without conflicts
+- [ ] Show each agent's diff inside Crewterm
 - [ ] Built-in Gemini CLI agent
 - [ ] Save and load team templates
 - [ ] Signed and notarized releases

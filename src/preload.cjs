@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('crewterm', {
   chooseProject: invoke('choose-project'),
   startAgent: invoke('start-agent'),
   stopAgent: invoke('stop-agent'),
+  mergeAgent: invoke('merge-agent'),
   userMessage: invoke('user-message'),
   addTask: invoke('add-task'),
   getState: invoke('get-state'),

@@ -7,13 +7,15 @@ const THEME = {
   selectionBackground: '#2f3b4d',
 };
 
-function showError(message) {
+function showToast(message, kind = 'error') {
   const t = $('#toast');
   t.textContent = message;
+  t.className = 'toast ' + kind;
   t.hidden = false;
-  clearTimeout(showError.timer);
-  showError.timer = setTimeout(() => (t.hidden = true), 5000);
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => (t.hidden = true), kind === 'error' ? 8000 : 4000);
 }
+const showError = message => showToast(message, 'error');
 
 async function call(fn, ...args) {
   const r = await fn(...args);
@@ -37,10 +39,23 @@ function createPane(agent) {
   $('#empty').hidden = true;
   const pane = el('div', 'pane');
   const header = el('div', 'pane-header');
+  const branch = el('span', 'badge branch');
+  branch.hidden = true;
+  const merge = el('button', 'secondary', 'Merge');
+  merge.hidden = true;
+  merge.onclick = async () => {
+    merge.disabled = true;
+    try {
+      const r = await call(crewterm.mergeAgent, agent.name);
+      showToast(r.message, r.merged ? 'success' : 'info');
+    } catch { /* already shown */ } finally {
+      merge.disabled = false;
+    }
+  };
   header.append(el('span', 'dot'), el('span', 'name', agent.name), el('span', 'badge', KINDS[agent.kind] ?? agent.kind),
-    el('span', 'role', agent.role ?? ''));
+    branch, el('span', 'role', agent.role ?? ''));
   const close = el('button', 'secondary', 'Close');
-  header.append(close);
+  header.append(merge, close);
   const box = el('div', 'terminal');
   pane.append(header, box);
   $('#panes').append(pane);
@@ -57,7 +72,16 @@ function createPane(agent) {
   term.onResize(({ cols, rows }) => crewterm.ptyResize(agent.name, cols, rows));
   new ResizeObserver(() => { try { fit.fit(); } catch {} }).observe(box);
 
-  const entry = { el: pane, term, fit, exited: false };
+  const entry = {
+    el: pane, term, fit, exited: false,
+    setBranch(name) {
+      if (!name) return;
+      branch.textContent = '⎇ ' + name;
+      branch.title = `Works on branch ${name} in its own git worktree`;
+      merge.title = `Merge ${name} into the project's current branch`;
+      branch.hidden = merge.hidden = false;
+    },
+  };
   close.onclick = () => {
     if (entry.exited) removePane(agent.name);
     else crewterm.stopAgent(agent.name);
@@ -87,7 +111,8 @@ crewterm.onPtyExit(({ name }) => {
 async function startAgent(agent) {
   const size = createPane(agent);
   try {
-    await call(crewterm.startAgent, { ...agent, ...size });
+    const r = await call(crewterm.startAgent, { ...agent, ...size });
+    panes.get(agent.name)?.setBranch(r?.branch);
   } catch (e) {
     removePane(agent.name);
     throw e;
@@ -174,6 +199,7 @@ $('#agentForm').onsubmit = async e => {
   const agent = {
     name: $('#agentName').value.trim(), kind: $('#agentKind').value, role: $('#agentRole').value.trim(),
     command: $('#agentCommand').value.trim(), notify: $('#agentNotify').checked,
+    worktree: $('#agentWorktree').checked,
   };
   try {
     await startAgent(agent);

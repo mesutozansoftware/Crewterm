@@ -3,6 +3,7 @@ import pty from 'node-pty';
 import fs from 'node:fs';
 import path from 'node:path';
 import { Hub, BROADCAST, HUMAN } from './hub.js';
+import { isGitRepo, ensureWorktree, mergeAgent } from './worktree.js';
 
 const ROOT = path.join(import.meta.dirname, '..');
 const MCP_SERVER = path.join(ROOT, 'mcp', 'server.js');
@@ -41,6 +42,14 @@ function teamInstructions(agent) {
     `- Message the owner before changing files that belong to a task someone else has claimed.`,
     `- When you finish a task, mark it with complete_task and send a short message to whoever needs to know.`,
     `- To ask the human user something or report to them, use send_message with to="${HUMAN}".`,
+    ...(agent.branch ? [
+      `Git:`,
+      `- You work in your own git worktree on the branch "${agent.branch}", so your edits never collide with your teammates'.`,
+      `- Commit your work with clear messages whenever you finish a task. Only committed work can be merged.`,
+      `- The human merges branches into "${agent.base}" from the Crewterm window. Do not merge other agents' branches yourself unless asked.`,
+      `- To review a teammate's work, run "git diff ${agent.base}...crewterm/<name>" or "git log crewterm/<name>"; team_members shows everyone's branch.`,
+      `- When you are told a branch was merged into "${agent.base}", run "git merge ${agent.base}" to stay up to date.`,
+    ] : []),
   ].join('\n');
 }
 
@@ -78,6 +87,8 @@ function agentCommand(agent) {
       '-c', `mcp_servers.crewterm.command=${lit(process.execPath)}`,
       '-c', `mcp_servers.crewterm.args=[${lit(MCP_SERVER)}]`,
       '-c', `mcp_servers.crewterm.env=${envToml}`,
+      // The crewterm tools only touch the local hub, so don't ask before every message.
+      '-c', `mcp_servers.crewterm.default_tools_approval_mode=${lit('approve')}`,
       argSafe(`${instructions}\n\nFor now, just use team_members to meet the team, briefly say you are ready, and wait for a task.`),
     ]);
   }
@@ -85,17 +96,33 @@ function agentCommand(agent) {
   return agent.command; // custom command
 }
 
-function startAgent(agent) {
+const starting = new Set(); // names reserved while a worktree is being created
+
+async function startAgent(agent) {
   if (!projectDir) throw new Error('Choose a project folder first.');
   if (!agent.name?.trim() || !/^[\p{L}\p{N}_-]+$/u.test(agent.name)) {
     throw new Error('Agent names may only contain letters, digits, - and _.');
   }
-  if (terminals.has(agent.name) || agent.name === BROADCAST || agent.name === HUMAN) {
+  if (terminals.has(agent.name) || starting.has(agent.name) || agent.name === BROADCAST || agent.name === HUMAN) {
     throw new Error(`The name "${agent.name}" is reserved or already in use.`);
   }
   if (agent.kind === 'custom' && !agent.command?.trim()) throw new Error('Custom command cannot be empty.');
 
-  hub.addAgent({ name: agent.name, kind: agent.kind, role: agent.role ?? '' });
+  let cwd = projectDir;
+  starting.add(agent.name);
+  try {
+    if (agent.worktree !== false && await isGitRepo(projectDir)) {
+      const wt = await ensureWorktree(projectDir, agent.name);
+      Object.assign(agent, { branch: wt.branch, base: wt.base });
+      cwd = wt.cwd;
+    } else {
+      agent.branch = null;
+    }
+  } finally {
+    starting.delete(agent.name);
+  }
+
+  hub.addAgent({ name: agent.name, kind: agent.kind, role: agent.role ?? '', branch: agent.branch, workdir: cwd });
 
   const command = agentCommand(agent);
   let env, shell, args;
@@ -123,7 +150,7 @@ function startAgent(agent) {
     name: 'xterm-256color',
     cols: agent.cols ?? 100,
     rows: agent.rows ?? 30,
-    cwd: projectDir,
+    cwd,
     env,
   });
   terminals.set(agent.name, { pty: p, name: agent.name, notify: agent.notify !== false });
@@ -133,6 +160,18 @@ function startAgent(agent) {
     hub.removeAgent(agent.name);
     send('pty-exit', { name: agent.name });
   });
+  return { branch: agent.branch };
+}
+
+// Merges an agent's branch into the project's current branch and tells the crew about it.
+async function mergeAgentBranch(name) {
+  if (!projectDir) throw new Error('Choose a project folder first.');
+  const result = await mergeAgent(projectDir, name);
+  if (result.merged && terminals.size) {
+    hub.sendMessage(HUMAN, BROADCAST,
+      `${result.message} Run "git merge ${result.target}" in your worktree to pick up the changes.`);
+  }
+  return result;
 }
 
 // Types a "[crewterm]" notice into an agent's terminal when it receives a message.
@@ -170,6 +209,7 @@ ipcMain.handle('choose-project', safe(async () => {
   return projectDir;
 }));
 ipcMain.handle('start-agent', safe(agent => startAgent(agent)));
+ipcMain.handle('merge-agent', safe(name => mergeAgentBranch(name)));
 ipcMain.handle('stop-agent', safe(name => terminals.get(name)?.pty.kill()));
 ipcMain.handle('user-message', safe(({ to, text }) => hub.sendMessage(HUMAN, to, text)));
 ipcMain.handle('add-task', safe(({ title, assignee }) => hub.addTask(HUMAN, title, '', assignee || null)));

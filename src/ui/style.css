@@ -92,4 +92,8 @@ dialog label.checkbox { flex-direction: row; align-items: center; gap: 8px; }
 .buttons { display: flex; justify-content: flex-end; gap: 8px; }
 .error { color: var(--red); min-height: 1em; margin: 0 0 8px; }
 
-.toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--red); color: #fff; padding: 8px 14px; border-radius: 8px; max-width: 70vw; }
+.pane-header .branch { color: var(--accent-2); font-family: ui-monospace, Menlo, monospace; }
+.toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); color: #fff; padding: 8px 14px; border-radius: 8px; max-width: 70vw; line-height: 1.4; box-shadow: 0 6px 24px rgb(0 0 0 / .4); }
+.toast.error { background: var(--red); }
+.toast.success { background: #238636; }
+.toast.info { background: var(--surface-2); border: 1px solid var(--border); }
